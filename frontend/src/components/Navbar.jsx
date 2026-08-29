@@ -34,7 +34,7 @@ function Navbar({ onMenuClick }) {
             </button>
           )}
           <Link to={logoDestination} className="text-base font-semibold tracking-tight text-foreground">
-            Sync<span className="text-accent">Reserve</span>
+            Reserve<span className="text-accent">One</span>
           </Link>
         </div>
 
