@@ -109,7 +109,7 @@ function RegisterPage() {
               type="text"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Chaitanya Gurav"
+              placeholder="Your Name"
               autoComplete="name"
               className="input-field pl-10"
             />
