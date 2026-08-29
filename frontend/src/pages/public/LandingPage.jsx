@@ -204,7 +204,7 @@ function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="mx-auto max-w-6xl px-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} SyncReserve. A full-stack web platform to manage campus facilities
+          © {new Date().getFullYear()} ReserveOne. A full-stack web platform to manage campus facilities
         </div>
       </footer>
     </div>
