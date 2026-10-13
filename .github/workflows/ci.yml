@@ -18,6 +18,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  docker:
+    name: Docker build and smoke test
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ci-only-secret-not-used-anywhere-real
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build images and start the stack
+        run: docker compose up --detach --build
+
+      - name: Smoke test through nginx
+        run: |
+          curl --fail --silent --show-error --retry 15 --retry-delay 2 --retry-all-errors http://localhost:8080/ > /dev/null
+          curl --fail --silent --show-error http://localhost:8080/api/health
+          curl --fail --silent --show-error http://localhost:8080/api/health/db
+
+      - name: Show container logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes
   frontend:
     name: Frontend lint and build
     runs-on: ubuntu-latest
