@@ -1,0 +1,62 @@
+name: CI
+
+# Run on every push to main, and every pull request targeting main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# This workflow only reads the repo — it never needs to push or write anything.
+permissions:
+  contents: read
+
+# If you push twice quickly, cancel the older, now-outdated run instead of
+# wasting time finishing it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    # A real Postgres, started alongside this job just for its duration.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: reserveone_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    # Stands in for backend/.env.test, which isn't committed to Git.
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/reserveone_test
+      JWT_SECRET: ci-only-secret-not-used-anywhere-real
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npm run init-test-db
+      - run: npm run migrate:test
+      - run: npm test
