@@ -1,0 +1,66 @@
+# Runs the whole of ReserveOne with one command: docker compose up --build
+# Then open http://localhost:8080
+
+name: reserveone
+
+services:
+  # PostgreSQL database.
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: reserveone
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+      POSTGRES_DB: reserveone
+    volumes:
+      # Database files live in a named volume, so data survives
+      # "docker compose down" and rebuilds.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reserveone -d reserveone"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # One-off job: creates the tables and applies migrations, then exits.
+  # Safe to re-run: schema.sql uses IF NOT EXISTS, and migrate.js skips
+  # migrations it has already applied.
+  migrate:
+    build: ./backend
+    command: ["sh", "-c", "node scripts/initDb.js && node scripts/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://reserveone:${POSTGRES_PASSWORD:-devpassword}@db:5432/reserveone
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # Express API. No ports published here — reached only through nginx.
+  backend:
+    build: ./backend
+    init: true
+    environment:
+      PORT: "5000"
+      # "db" is the service name above — Docker's internal DNS, not localhost.
+      DATABASE_URL: postgres://reserveone:${POSTGRES_PASSWORD:-devpassword}@db:5432/reserveone
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the .env file next to compose.yaml}
+      FRONTEND_URL: http://localhost:8080
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # nginx, serving the built React app and forwarding /api to the backend.
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

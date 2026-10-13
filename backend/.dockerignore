@@ -1,0 +1,13 @@
+# Installed fresh inside the image by npm ci, never copied from your laptop.
+node_modules
+
+# Secrets stay out of the image. They are passed in when the container starts.
+.env
+.env.*
+
+# Not needed to run the API in production.
+tests
+coverage
+*.log
+Dockerfile
+.dockerignore
